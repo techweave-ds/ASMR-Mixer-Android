@@ -2,9 +2,16 @@ apply plugin: 'com.android.application'
 
 def keystorePropertiesFile = rootProject.file("keystore.properties")
 def keystoreProperties = new Properties()
-if (keystorePropertiesFile.exists()) {
+def hasKeystoreProps = keystorePropertiesFile.exists()
+if (hasKeystoreProps) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
+def keystoreFile = System.getProperty("keystoreFile")
+def keystorePassword = System.getProperty("keystorePassword")
+def keyAlias = System.getProperty("keyAlias")
+def keyPassword = System.getProperty("keyPassword")
+def hasReleaseSigning = keystoreFile != null ||
+    (hasKeystoreProps && keystoreProperties['storeFile'])
 
 android {
     namespace "app.noctune.android"
@@ -24,17 +31,26 @@ android {
     }
     signingConfigs {
         release {
-            storeFile file(System.getProperty("keystoreFile") ?: (keystorePropertiesFile.exists() ? keystoreProperties['storeFile'] : ""))
-            storePassword System.getProperty("keystorePassword") ?: (keystorePropertiesFile.exists() ? keystoreProperties['storePassword'] : "")
-            keyAlias System.getProperty("keyAlias") ?: (keystorePropertiesFile.exists() ? keystoreProperties['keyAlias'] : "")
-            keyPassword System.getProperty("keyPassword") ?: (keystorePropertiesFile.exists() ? keystoreProperties['keyPassword'] : "")
+            if (keystoreFile != null) {
+                storeFile file(keystoreFile)
+                storePassword keystorePassword
+                keyAlias keyAlias
+                keyPassword keyPassword
+            } else if (hasKeystoreProps) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
         }
     }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }
