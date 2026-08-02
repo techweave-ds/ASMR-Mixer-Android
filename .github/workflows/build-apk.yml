@@ -48,13 +48,17 @@ jobs:
           if-no-files-found: error
 
       - name: Build release AAB
-        if: github.ref == 'refs/heads/main' && secrets.ANDROID_KEYSTORE != ''
+        if: github.ref == 'refs/heads/main'
         env:
           ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
+          if [ -z "$ANDROID_KEYSTORE" ]; then
+            echo "::warning::ANDROID_KEYSTORE not set — skipping release AAB"
+            exit 0
+          fi
           echo "$ANDROID_KEYSTORE" | base64 -d > android/keystore.jks
           cd android && ./gradlew bundleRelease -DkeystoreFile=keystore.jks \
             -DkeystorePassword="$ANDROID_KEYSTORE_PASSWORD" \
@@ -62,7 +66,7 @@ jobs:
             -DkeyPassword="$ANDROID_KEY_PASSWORD"
 
       - name: Upload release AAB
-        if: github.ref == 'refs/heads/main' && secrets.ANDROID_KEYSTORE != ''
+        if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
           name: noctune-release-aab
